@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Linux.do 订阅器{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="wrap">
+        <header class="d-header">
+            <div class="container">
+                <a href="/" class="logo">LINUX.DO <span class="tag">Subscriber</span></a>
+                <nav class="nav">
+                    <a href="/">最新</a>
+                    <a href="/following">关注</a>
+                </nav>
+                <form class="header-search" method="get" action="/" id="header-search-form" autocomplete="off">
+                    <div class="search-input-wrap">
+                        <input type="text" name="q" value="{{ request.args.get('q', '') }}" placeholder="搜索..." class="search-input" id="search-input" autocomplete="off">
+                        {% if search_history|default([]) %}
+                        <div class="search-history" id="search-history">
+                            {% for item in search_history %}
+                            <a href="{{ build_url('/', q=item.query, search_type=item.search_type) }}" class="search-history-item">
+                                <span>{{ item.query }}</span>
+                                <small>{% if item.search_type == 'tag' %}标签{% elif item.search_type == 'category' %}类别{% else %}全部{% endif %}</small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <select name="search_type" class="search-select" title="搜索范围">
+                        <option value="all" {% if request.args.get('search_type', 'all') == 'all' %}selected{% endif %}>全部</option>
+                        <option value="tag" {% if request.args.get('search_type') == 'tag' %}selected{% endif %}>标签</option>
+                        <option value="category" {% if request.args.get('search_type') == 'category' %}selected{% endif %}>类别</option>
+                    </select>
+                    <button type="submit" class="search-btn" aria-label="搜索">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    </button>
+                </form>
+                <div class="red-dot-wrap" id="red-dot-wrap">
+                    <div class="red-dot" id="red-dot" title="有新内容">
+                        <span class="dot"></span>
+                        <span class="count" id="red-count">0</span>
+                    </div>
+                    <div class="red-dot-dropdown" id="red-dot-dropdown" style="display:none;">
+                        <div class="rd-header">
+                            <strong>更新内容</strong>
+                            <button class="rd-close" id="rd-close" title="关闭">&times;</button>
+                        </div>
+                        <div class="rd-list" id="rd-list"></div>
+                        <div class="rd-footer">
+                            <button class="rd-mark" onclick="markReadAndClose()">标记已读</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="container main">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="d-footer">
+            <div class="container">
+                <small>Linux.do Subscriber · 无账号阅读体验 · 本地快照由 Git 管理</small>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // 搜索时保留现有筛选参数
+        (function() {
+            const form = document.getElementById('header-search-form');
+            if (!form) return;
+            form.addEventListener('submit', function(e) {
+                const params = new URLSearchParams(window.location.search);
+                params.forEach(function(value, key) {
+                    if (key === 'q' || key === 'search_type') return;
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = value;
+                    form.appendChild(input);
+                });
+            });
+        })();
+
+        // 搜索历史下拉控制
+        (function() {
+            const input = document.getElementById('search-input');
+            const dropdown = document.getElementById('search-history');
+            if (!input || !dropdown) return;
+
+            function show() { dropdown.style.display = 'block'; }
+            function hide() { dropdown.style.display = 'none'; }
+
+            input.addEventListener('focus', show);
+            input.addEventListener('blur', function() {
+                setTimeout(hide, 150); // 延迟以便点击历史项
+            });
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') hide();
+            });
+
+            dropdown.addEventListener('mousedown', function(e) {
+                e.preventDefault(); // 防止 blur 先于 click
+            });
+        })();
+
+        // 标记已读（刷新页面或点击红点时清空）
+        async function markRead() {
+            try {
+                await fetch('/api/mark-read', {method: 'POST'});
+                const wrap = document.getElementById('red-dot');
+                wrap.classList.remove('active');
+            } catch (e) {}
+        }
+
+        // 红点检测
+        async function checkRedDot() {
+            try {
+                const res = await fetch('/api/red-dot');
+                const data = await res.json();
+                const el = document.getElementById('red-count');
+                const wrap = document.getElementById('red-dot');
+                if (data.count > 0) {
+                    el.textContent = data.count > 99 ? '99+' : data.count;
+                    wrap.classList.add('active');
+                } else {
+                    wrap.classList.remove('active');
+                }
+            } catch (e) {}
+        }
+
+        // 下拉面板控制
+        const rdWrap = document.getElementById('red-dot-wrap');
+        const rdDot = document.getElementById('red-dot');
+        const rdDropdown = document.getElementById('red-dot-dropdown');
+        const rdList = document.getElementById('rd-list');
+        const rdClose = document.getElementById('rd-close');
+
+        function showDropdown() { rdDropdown.style.display = 'block'; }
+        function hideDropdown() { rdDropdown.style.display = 'none'; }
+
+        async function loadRedDotItems() {
+            try {
+                const res = await fetch('/api/red-dot/items');
+                const data = await res.json();
+                if (!data.items || data.items.length === 0) {
+                    rdList.innerHTML = '<div class="rd-empty">暂无更新</div>';
+                    return;
+                }
+                rdList.innerHTML = data.items.map(item => `
+                    <a href="/topic/${item.filepath}" class="rd-item" data-id="${item.id}">
+                        <div class="rd-title">${escapeHtml(item.title)}</div>
+                        <div class="rd-meta">
+                            <span class="rd-cat">${escapeHtml(item.category)}</span>
+                            <span class="rd-time">${escapeHtml(item.relative_bumped)}</span>
+                        </div>
+                    </a>
+                `).join('');
+            } catch (e) {
+                rdList.innerHTML = '<div class="rd-empty">加载失败</div>';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function markReadAndClose() {
+            hideDropdown();
+            await markRead();
+        }
+
+        // 点击红点：切换下拉面板
+        rdDot.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            if (rdDropdown.style.display === 'block') {
+                markReadAndClose();
+            } else {
+                await loadRedDotItems();
+                showDropdown();
+            }
+        });
+
+        // 点击列表项：标记已读并跳转
+        rdList.addEventListener('click', function(e) {
+            const item = e.target.closest('.rd-item');
+            if (!item) return;
+            markRead();
+        });
+
+        // 关闭按钮
+        rdClose.addEventListener('click', function(e) {
+            e.stopPropagation();
+            markReadAndClose();
+        });
+
+        // 点击外部关闭
+        document.addEventListener('click', function(e) {
+            if (!rdWrap.contains(e.target) && rdDropdown.style.display === 'block') {
+                markReadAndClose();
+            }
+        });
+
+        // 页面加载时先检测红点，不自动标记已读；用户主动查看后才标记
+        checkRedDot();
+        setInterval(checkRedDot, 60000);
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
