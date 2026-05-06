@@ -90,7 +90,7 @@ class LinuxDoFetcher:
         return pids
 
     def _hide_browser_windows(self, target_pids):
-        """使用 Windows API 隐藏指定 PID 的 Chromium 窗口（任务栏也不显示图标）。"""
+        """使用 Windows API 将 Chromium 窗口设为工具窗口并隐藏，确保任务栏完全不出现图标。"""
         if not target_pids:
             return
         try:
@@ -98,21 +98,36 @@ class LinuxDoFetcher:
             from ctypes import wintypes
 
             user32 = ctypes.windll.user32
+            kernel32 = ctypes.windll.kernel32
             EnumWindowsProc = ctypes.WINFUNCTYPE(
                 wintypes.BOOL, wintypes.HWND, wintypes.LPARAM
             )
             SW_HIDE = 0
+            GWL_EXSTYLE = -20
+            WS_EX_TOOLWINDOW = 0x00000080
+
+            found = []
 
             def enum_callback(hwnd, _):
-                if not user32.IsWindowVisible(hwnd):
+                if not user32.IsWindow(hwnd):
                     return True
                 pid = wintypes.DWORD()
                 user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
                 if pid.value in target_pids:
+                    # 工具窗口样式：任务栏不显示图标
+                    ex_style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+                    user32.SetWindowLongW(hwnd, GWL_EXSTYLE, ex_style | WS_EX_TOOLWINDOW)
+                    # 彻底隐藏
                     user32.ShowWindow(hwnd, SW_HIDE)
+                    found.append(hwnd)
                 return True
 
-            user32.EnumWindows(EnumWindowsProc(enum_callback), 0)
+            # 循环尝试：窗口创建可能有延迟
+            for _ in range(20):
+                user32.EnumWindows(EnumWindowsProc(enum_callback), 0)
+                if found:
+                    break
+                kernel32.Sleep(50)
         except Exception:
             pass
 
@@ -125,10 +140,13 @@ class LinuxDoFetcher:
             before_pids = self._get_chrome_pids()
             self._pw = sync_playwright().start()
             # 必须用 headed 模式，headless 会被 Cloudflare 检测
-            # 窗口移出屏幕 + 启动后通过 WinAPI 隐藏，确保任务栏无图标
+            # 窗口移出屏幕 + 极小尺寸 + 启动后设为工具窗口并隐藏，确保任务栏完全不出现图标
             self._pw_browser = self._pw.chromium.launch(
                 headless=False,
-                args=["--window-position=-10000,-10000"]
+                args=[
+                    "--window-position=-10000,-10000",
+                    "--window-size=1,1",
+                ]
             )
             state_file = "linux-do-state.json"
             if os.path.exists(state_file):
@@ -136,8 +154,7 @@ class LinuxDoFetcher:
             else:
                 self._pw_context = self._pw_browser.new_context()
             self._pw_page = self._pw_context.new_page()
-            # 等待窗口创建完成后隐藏
-            time.sleep(0.5)
+            # 立即查找并隐藏新窗口（循环检测，避免一闪而过）
             after_pids = self._get_chrome_pids()
             self._hide_browser_windows(after_pids - before_pids)
             logger.info("Playwright headed browser initialized for Cloudflare bypass.")
