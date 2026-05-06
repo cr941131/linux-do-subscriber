@@ -50,3 +50,8 @@
 
 #### 变更内容
 - 启动后通过 EnumWindows + GetWindowThreadProcessId + ShowWindow(SW_HIDE) 精确隐藏当前新启动的 Chromium 窗口，避免与用户已有 Chrome 冲突。
+
+### feat: 彻底修复数字分类目录问题
+
+#### 变更内容
+- 新增 category-map.json 维护 id→名称映射，main.py 保存帖子时优先查表。迁移全部剩余数字目录（11/14/27/34/4/94）。

@@ -12,6 +12,7 @@ data/
 # Secrets & session state
 cookies.txt
 linux-do-state.json
+linux-do-tags.json
 search-history.json
 state.json
 tag-stats.json
