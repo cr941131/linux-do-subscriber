@@ -38,3 +38,23 @@
 **现象**：界面上几乎看不到标签。
 **原因**：`/latest.rss` 每页只有 30 条，且很多帖子本身不带标签。
 **解决**：在 `config.yaml` 的 `following_tags` 中配置关注的标签，系统会额外抓取对应标签的 RSS feed，从而积累更多标签数据。
+
+## 数据存储
+
+### 首页出现数字分类选项卡（如 11、94）
+**现象**：分类导航条出现 `11`、`94` 等数字，而非中文分类名。
+**原因**：Discourse API 某些场景下只返回 `category_id` 而不返回 `category_name` 或 `category_slug`，原代码直接用数字 ID 作为目录名。
+**解决**：
+- 项目已引入 `category-map.json`，从 Discourse `/site.json` 维护 `id → 名称` 映射
+- `main.py` 保存帖子时优先查表，回退到 `uncategorized` 而非数字 ID
+- 若已有历史数字目录，手动迁移到对应中文目录即可
+
+## Playwright 浏览器
+
+###  headed 模式弹出可见窗口 / 任务栏出现 Chrome 图标
+**现象**：Playwright 启动 headed Chromium 时屏幕上出现浏览器窗口，或任务栏出现 Chrome 图标。
+**原因**：headed 模式默认会创建可见窗口。
+**解决**：
+- 启动参数已设置 `--window-position=-10000,-10000` 将窗口移出屏幕
+- 启动后通过 `EnumWindows` + `ShowWindow(SW_HIDE)` 精确隐藏当前进程新创建的 Chromium 窗口，不影响用户已有的 Chrome
+- 具体实现见 `fetcher.py` 的 `_hide_browser_windows`

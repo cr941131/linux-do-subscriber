@@ -36,11 +36,29 @@ Windows 用户也可使用提供的 BAT 脚本：
 scripts/setup-embed.ps1   # 初始化嵌入式环境
 ```
 
+## Git 与 GitHub
+
+### SSH 推送（Port 22 被拦截时）
+若直接 `git push` 报错 `Connection closed`（Port 22 被防火墙拦截），可配置 SSH 走 HTTPS 端口：
+
+```
+# ~/.ssh/config
+Host github.com
+    Hostname ssh.github.com
+    Port 443
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking accept-new
+```
+
+生成 key：`ssh-keygen -t ed25519 -C "备注"`，将公钥添加到 GitHub Settings → SSH keys。
+
 ## 持久化与备份
 
 - `data/` 目录是独立的 Git 仓库，包含所有抓取内容。
 - 备份只需复制 `data/` 目录或对其执行 `git clone`。
-- `search-history.json`、`tag-stats.json`、`linux-do-state.json` 位于项目根目录，不纳入版本控制，丢失后可重建。
+- `search-history.json`、`tag-stats.json`、`linux-do-state.json`、`linux-do-tags.json` 位于项目根目录，不纳入版本控制，丢失后可重建。
+- `category-map.json` 由 Playwright 从 Discourse `/site.json` 自动生成，用于将 `category_id` 映射为中文分类名，不纳入版本控制也可重建。
 
 ## 部署陷阱
 

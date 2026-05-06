@@ -34,6 +34,12 @@
 - 项目定位是"订阅器"而非"客户端"，所有内容变更来自抓取端。
 - 只读 UI 大幅降低状态管理和并发冲突风险。
 
+### 为什么引入 category-map.json
+- **场景**：Discourse API 在 RSS/Playwright fallback 模式下有时只返回 `category_id`，导致帖子被保存到 `data/categories/11/` 等数字目录，前端分类导航出现数字选项卡。
+- **备选**：在 `main.py` 中硬编码分类 ID 映射；或从帖子详情 API 实时查询分类名称。
+- **选择**：启动时通过 Playwright 抓取 Discourse `/site.json`，生成 `category-map.json`（`id → name`）。保存帖子时优先查表，回退到 `uncategorized` 而非数字 ID。
+- **取舍**：新增一个外部依赖文件，但避免了硬编码映射的维护负担；映射文件可随站点分类变化自动重建。
+
 ## 不在这里记的内容
 
 - 目录结构 → `ls` / `tree`
