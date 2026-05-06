@@ -217,8 +217,7 @@ a:hover { text-decoration: underline; }
 .rd-close:hover { color: var(--text); }
 .rd-list {
     overflow-y: auto;
-    min-height: 0;
-    overscroll-behavior: contain;
+    max-height: 320px;
     padding: 4px 0;
 }
 .rd-item {
