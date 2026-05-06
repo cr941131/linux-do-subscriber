@@ -14,6 +14,7 @@
                 <nav class="nav">
                     <a href="/">最新</a>
                     <a href="/following">关注</a>
+                    <a href="/updates">更新</a>
                 </nav>
                 <form class="header-search" method="get" action="/" id="header-search-form" autocomplete="off">
                     <div class="search-input-wrap">
@@ -38,22 +39,12 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                     </button>
                 </form>
-                <div class="red-dot-wrap" id="red-dot-wrap">
-                    <div class="red-dot" id="red-dot" title="有新内容">
+                <a href="/updates" class="red-dot-wrap" id="red-dot-wrap" title="有新内容">
+                    <div class="red-dot" id="red-dot">
                         <span class="dot"></span>
                         <span class="count" id="red-count">0</span>
                     </div>
-                    <div class="red-dot-dropdown" id="red-dot-dropdown" style="display:none;">
-                        <div class="rd-header">
-                            <strong>更新内容</strong>
-                            <button class="rd-close" id="rd-close" title="关闭">&times;</button>
-                        </div>
-                        <div class="rd-list" id="rd-list"></div>
-                        <div class="rd-footer">
-                            <button class="rd-mark" onclick="markReadAndClose()">标记已读</button>
-                        </div>
-                    </div>
-                </div>
+                </a>
             </div>
         </header>
 
@@ -133,91 +124,7 @@
             } catch (e) {}
         }
 
-        // 下拉面板控制
-        const rdWrap = document.getElementById('red-dot-wrap');
-        const rdDot = document.getElementById('red-dot');
-        const rdDropdown = document.getElementById('red-dot-dropdown');
-        const rdList = document.getElementById('rd-list');
-        const rdClose = document.getElementById('rd-close');
-
-        function showDropdown() { rdDropdown.style.display = 'block'; }
-        function hideDropdown() { rdDropdown.style.display = 'none'; }
-
-        async function loadRedDotItems() {
-            try {
-                const res = await fetch('/api/red-dot/items');
-                const data = await res.json();
-                if (!data.items || data.items.length === 0) {
-                    rdList.innerHTML = '<div class="rd-empty">暂无更新</div>';
-                    return;
-                }
-                rdList.innerHTML = data.items.map(item => `
-                    <a href="/topic/${item.filepath}" class="rd-item" data-id="${item.id}">
-                        <div class="rd-title">${escapeHtml(item.title)}</div>
-                        <div class="rd-meta">
-                            <span class="rd-cat">${escapeHtml(item.category)}</span>
-                            <span class="rd-time">${escapeHtml(item.relative_bumped)}</span>
-                        </div>
-                    </a>
-                `).join('');
-            } catch (e) {
-                rdList.innerHTML = '<div class="rd-empty">加载失败</div>';
-            }
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        async function markReadAndClose() {
-            hideDropdown();
-            await markRead();
-        }
-
-        // 点击红点：切换下拉面板
-        rdDot.addEventListener('click', async function(e) {
-            e.stopPropagation();
-            if (rdDropdown.style.display === 'block') {
-                markReadAndClose();
-            } else {
-                await loadRedDotItems();
-                showDropdown();
-            }
-        });
-
-        // 点击列表项：标记已读并跳转
-        rdList.addEventListener('click', function(e) {
-            const item = e.target.closest('.rd-item');
-            if (!item) return;
-            markRead();
-        });
-
-        // 关闭按钮
-        rdClose.addEventListener('click', function(e) {
-            e.stopPropagation();
-            markReadAndClose();
-        });
-
-        // 下拉面板内滚动：在 document 层拦截滚轮，防止页面跟随滚动
-        document.addEventListener('wheel', function(e) {
-            if (rdDropdown.style.display !== 'block') return;
-            // 鼠标在下拉面板内（含 header/list/footer）
-            if (rdDropdown.contains(e.target)) {
-                e.preventDefault();
-                rdList.scrollTop += e.deltaY;
-            }
-        }, { passive: false });
-
-        // 点击外部关闭
-        document.addEventListener('click', function(e) {
-            if (!rdWrap.contains(e.target) && rdDropdown.style.display === 'block') {
-                markReadAndClose();
-            }
-        });
-
-        // 页面加载时先检测红点，不自动标记已读；用户主动查看后才标记
+        // 页面加载时先检测红点，不自动标记已读；进入更新页面后才标记
         checkRedDot();
         setInterval(checkRedDot, 60000);
     </script>

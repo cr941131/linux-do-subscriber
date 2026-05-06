@@ -308,6 +308,16 @@ def user_page(username):
     return render_template("user.html", username=username, topics=filtered)
 
 
+@app.route("/updates")
+def updates():
+    """更新页面：展示最近 24 小时新增或更新的帖子。"""
+    items = engine.get_red_dot_items(hours=24)
+    for t in items:
+        t["relative_bumped"] = _format_relative(t.get("bumped_at", ""))
+        t["relative_created"] = _format_relative(t.get("created_at", ""))
+    return render_template("updates.html", topics=items)
+
+
 @app.route("/api/topics")
 def api_topics():
     """JSON API：供前端 AJAX 调用。"""

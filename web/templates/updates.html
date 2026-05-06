@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}更新 - Linux.do 订阅器{% endblock %}
+
+{% block content %}
+<section class="topic-list">
+    <div class="list-header">
+        <h2>最近更新 <small>共 {{ topics|length }} 条</small></h2>
+    </div>
+
+    {% for t in topics %}
+    <article class="topic-row">
+        <div class="topic-main">
+            <a class="title" href="/topic/{{ topic_url(t._filepath) }}">
+                {{ t.title }}
+            </a>
+            <div class="meta">
+                <span class="cat">{{ t.category_id }}</span>
+                <span class="author">@{{ t.author }}</span>
+                <span class="time" title="发布时间">发布 {{ t.relative_created }}</span>
+                <span class="time" title="最后回复">回复 {{ t.relative_bumped }}</span>
+                {% if t.tags %}
+                    {% for tag in t.tags %}
+                    <span class="tag-pill">{{ tag.name if tag is mapping else tag }}</span>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="topic-stats">
+            <div class="stat" title="回复数">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                {{ t.replies_count }}
+            </div>
+            <div class="stat" title="浏览量">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                {{ t.views }}
+            </div>
+        </div>
+    </article>
+    {% else %}
+    <div class="empty">暂无更新内容。</div>
+    {% endfor %}
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 进入更新页面后自动标记已读
+markRead();
+</script>
+{% endblock %}
