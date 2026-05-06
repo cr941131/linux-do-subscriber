@@ -42,15 +42,25 @@ def _load_category_map() -> dict:
 
 def _resolve_category_slug(topic: dict, detail: dict | None, category_map: dict) -> str:
     """根据 topic / detail 信息解析人类可读的分级目录名。"""
-    # 1. 优先使用 detail 里的 slug
+    # 1. detail 里的 slug（若纯数字则查映射表）
     if detail and "category_slug" in detail:
-        return detail["category_slug"]
+        slug = detail["category_slug"]
+        if slug.isdigit():
+            mapped = category_map.get(slug)
+            if mapped:
+                return mapped
+        return slug
     # 2. RSS 模式下的名称
     if topic.get("category_name"):
-        return topic["category_name"]
+        name = topic["category_name"]
+        if name.isdigit():
+            mapped = category_map.get(name)
+            if mapped:
+                return mapped
+        return name
     # 3. 用 category_id 查映射表
     cat_id = topic.get("category_id")
-    if cat_id is not None:
+    if cat_id is not None and str(cat_id):
         mapped = category_map.get(str(cat_id))
         if mapped:
             return mapped

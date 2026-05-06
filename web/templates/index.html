@@ -73,7 +73,7 @@
                     <span class="time" title="最后回复">回复 {{ t.relative_bumped }}</span>
                     {% if t.tags %}
                         {% for tag in t.tags %}
-                        <span class="tag-pill">{{ tag }}</span>
+                        <span class="tag-pill">{{ tag.name if tag is mapping else tag }}</span>
                         {% endfor %}
                     {% endif %}
                 </div>
