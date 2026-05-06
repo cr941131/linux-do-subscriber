@@ -45,3 +45,8 @@
 
 #### 变更内容
 - 将 category_id 作为目录名的历史数据迁移到中文分类名：11→搞七捻三、2→运营反馈、4→开发调优。
+
+### feat: Playwright 浏览器窗口彻底隐藏（任务栏无图标）
+
+#### 变更内容
+- 启动后通过 EnumWindows + GetWindowThreadProcessId + ShowWindow(SW_HIDE) 精确隐藏当前新启动的 Chromium 窗口，避免与用户已有 Chrome 冲突。

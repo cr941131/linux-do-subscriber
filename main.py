@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import time
@@ -25,6 +26,38 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+_CATEGORY_MAP_PATH = os.path.join(_project_root, "category-map.json")
+
+
+def _load_category_map() -> dict:
+    """加载 category_id 到分类名称的映射，避免用数字做目录名。"""
+    if not os.path.exists(_CATEGORY_MAP_PATH):
+        return {}
+    try:
+        with open(_CATEGORY_MAP_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _resolve_category_slug(topic: dict, detail: dict | None, category_map: dict) -> str:
+    """根据 topic / detail 信息解析人类可读的分级目录名。"""
+    # 1. 优先使用 detail 里的 slug
+    if detail and "category_slug" in detail:
+        return detail["category_slug"]
+    # 2. RSS 模式下的名称
+    if topic.get("category_name"):
+        return topic["category_name"]
+    # 3. 用 category_id 查映射表
+    cat_id = topic.get("category_id")
+    if cat_id is not None:
+        mapped = category_map.get(str(cat_id))
+        if mapped:
+            return mapped
+        return str(cat_id)
+    return "uncategorized"
+
+
 def load_config(path: str = "config.yaml") -> dict:
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
@@ -39,6 +72,7 @@ def job_once(config: dict, interactive: bool = False):
     )
     git = GitSnapshot(repo_dir=config["data_dir"])
     engine = FilterEngine()
+    category_map = _load_category_map()
 
     try:
         topics, is_backfill = fetcher.run(interactive=interactive)
@@ -51,16 +85,7 @@ def job_once(config: dict, interactive: bool = False):
         for t in topics:
             tid = t.get("id", 0)
             detail = fetcher.fetch_topic_detail(tid)
-
-            # 尝试获取分类 slug
-            cat_slug = "uncategorized"
-            if detail and "category_slug" in detail:
-                cat_slug = detail["category_slug"]
-            elif t.get("category_name"):
-                # RSS 模式下 category_name 是字符串名称
-                cat_slug = t["category_name"]
-            elif "category_id" in t:
-                cat_slug = str(t["category_id"])
+            cat_slug = _resolve_category_slug(t, detail, category_map)
 
             # 保存到分类目录
             store.save_topic(t, detail=detail, category_slug=cat_slug)
