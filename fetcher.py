@@ -69,14 +69,63 @@ class LinuxDoFetcher:
         sleep_time = self.delay * self._delay_factor + random.uniform(0, self.jitter * self._delay_factor)
         time.sleep(sleep_time)
 
+    def _get_chrome_pids(self):
+        """获取当前所有 chrome.exe / chromium.exe 的 PID（Windows tasklist）。"""
+        pids = set()
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq chrome.exe", "/FO", "CSV", "/NH"],
+                capture_output=True, text=True, timeout=5,
+            )
+            for line in result.stdout.strip().splitlines():
+                parts = line.split(",")
+                if len(parts) >= 2:
+                    try:
+                        pids.add(int(parts[1].strip('"')))
+                    except ValueError:
+                        pass
+        except Exception:
+            pass
+        return pids
+
+    def _hide_browser_windows(self, target_pids):
+        """使用 Windows API 隐藏指定 PID 的 Chromium 窗口（任务栏也不显示图标）。"""
+        if not target_pids:
+            return
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            user32 = ctypes.windll.user32
+            EnumWindowsProc = ctypes.WINFUNCTYPE(
+                wintypes.BOOL, wintypes.HWND, wintypes.LPARAM
+            )
+            SW_HIDE = 0
+
+            def enum_callback(hwnd, _):
+                if not user32.IsWindowVisible(hwnd):
+                    return True
+                pid = wintypes.DWORD()
+                user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+                if pid.value in target_pids:
+                    user32.ShowWindow(hwnd, SW_HIDE)
+                return True
+
+            user32.EnumWindows(EnumWindowsProc(enum_callback), 0)
+        except Exception:
+            pass
+
     def _init_playwright(self):
         """初始化 Playwright headed 浏览器（用于绕过 Cloudflare）。"""
         if self._pw_browser is not None:
             return
         try:
             from playwright.sync_api import sync_playwright
+            before_pids = self._get_chrome_pids()
             self._pw = sync_playwright().start()
-            # 必须用 headed 模式，headless 会被 Cloudflare 检测；通过窗口位置移出屏幕实现隐藏
+            # 必须用 headed 模式，headless 会被 Cloudflare 检测
+            # 窗口移出屏幕 + 启动后通过 WinAPI 隐藏，确保任务栏无图标
             self._pw_browser = self._pw.chromium.launch(
                 headless=False,
                 args=["--window-position=-10000,-10000"]
@@ -87,6 +136,10 @@ class LinuxDoFetcher:
             else:
                 self._pw_context = self._pw_browser.new_context()
             self._pw_page = self._pw_context.new_page()
+            # 等待窗口创建完成后隐藏
+            time.sleep(0.5)
+            after_pids = self._get_chrome_pids()
+            self._hide_browser_windows(after_pids - before_pids)
             logger.info("Playwright headed browser initialized for Cloudflare bypass.")
         except Exception as e:
             logger.error(f"Failed to init Playwright: {e}")
