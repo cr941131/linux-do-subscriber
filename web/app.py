@@ -181,13 +181,16 @@ def index():
         t["relative_bumped"] = _format_relative(t.get("bumped_at", ""))
         t["relative_created"] = _format_relative(t.get("created_at", ""))
 
-    # 获取分类列表（从目录结构推断）
+    # 获取分类列表（从目录结构推断，过滤掉纯数字的旧目录）
     cat_dir = os.path.join(DATA_DIR, "categories")
     category_slugs = []
     if os.path.exists(cat_dir):
-        category_slugs = [d for d in os.listdir(cat_dir) if os.path.isdir(os.path.join(cat_dir, d))]
+        category_slugs = [
+            d for d in os.listdir(cat_dir)
+            if os.path.isdir(os.path.join(cat_dir, d)) and not d.isdigit()
+        ]
 
-    # 收集所有出现过的标签（去重排序）
+    # 收集所有出现过的标签（按使用频率取前 30）
     all_tags = set()
     for t in topics:
         for tag in t.get("tags", []):
@@ -196,7 +199,21 @@ def index():
             tag_key = tag.get("name") or tag.get("slug") or tag if isinstance(tag, dict) else tag
             if tag_key:
                 all_tags.add(tag_key)
-    all_tags = sorted(all_tags)
+
+    tag_stats_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tag-stats.json")
+    tag_counts = {}
+    if os.path.exists(tag_stats_path):
+        try:
+            with open(tag_stats_path, "r", encoding="utf-8") as f:
+                tag_counts = json.load(f)
+        except Exception:
+            pass
+
+    all_tags = sorted(
+        all_tags,
+        key=lambda t: tag_counts.get(t, {}).get("count", 0),
+        reverse=True,
+    )[:30]
 
     # 红点标记：last_fetched 晚于已读时间的内容
     red_dot_ids = {
