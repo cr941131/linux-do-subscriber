@@ -200,13 +200,12 @@
             markReadAndClose();
         });
 
-        // 阻止下拉面板内滚动事件冒泡到页面
+        // 下拉面板内滚动：有溢出时接管滚轮，防止页面跟随滚动
         rdList.addEventListener('wheel', function(e) {
             e.stopPropagation();
-            const atTop = rdList.scrollTop <= 0;
-            const atBottom = rdList.scrollTop + rdList.clientHeight >= rdList.scrollHeight - 1;
-            if ((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)) {
+            if (rdList.scrollHeight > rdList.clientHeight) {
                 e.preventDefault();
+                rdList.scrollTop += e.deltaY;
             }
         }, { passive: false });
 
