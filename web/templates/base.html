@@ -200,10 +200,11 @@
             markReadAndClose();
         });
 
-        // 下拉面板内滚动：有溢出时接管滚轮，防止页面跟随滚动
-        rdList.addEventListener('wheel', function(e) {
-            e.stopPropagation();
-            if (rdList.scrollHeight > rdList.clientHeight) {
+        // 下拉面板内滚动：在 document 层拦截滚轮，防止页面跟随滚动
+        document.addEventListener('wheel', function(e) {
+            if (rdDropdown.style.display !== 'block') return;
+            // 鼠标在下拉面板内（含 header/list/footer）
+            if (rdDropdown.contains(e.target)) {
                 e.preventDefault();
                 rdList.scrollTop += e.deltaY;
             }

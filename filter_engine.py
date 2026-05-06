@@ -42,7 +42,11 @@ class FilterEngine:
             return None
 
     def list_all_topics(self) -> List[Dict[str, Any]]:
-        """遍历 data/categories 下的所有 .md 文件并解析元数据（带 30 秒缓存）。"""
+        """遍历 data/categories 下的所有 .md 文件并解析元数据（带 30 秒缓存）。
+
+        同一帖子可能因分类映射迁移同时存在于数字目录与中文目录，
+        按文件名去重并优先保留非纯数字目录的副本。
+        """
         import time
         now = time.time()
         if self._topics_cache is not None and (now - self._topics_cache_time) < self._cache_ttl:
@@ -51,14 +55,26 @@ class FilterEngine:
         cat_dir = os.path.join(self.data_dir, "categories")
         if not os.path.exists(cat_dir):
             return topics
+
+        seen = {}  # fname -> filepath
         for root, _dirs, files in os.walk(cat_dir):
             for fname in files:
                 if not fname.endswith(".md"):
                     continue
                 filepath = os.path.join(root, fname)
-                meta = self.parse_frontmatter(filepath)
-                if meta:
-                    topics.append(meta)
+                if fname in seen:
+                    existing_dir = os.path.basename(os.path.dirname(seen[fname]))
+                    current_dir = os.path.basename(os.path.dirname(filepath))
+                    # 优先保留非纯数字目录（中文 slug 目录）
+                    if existing_dir.isdigit() and not current_dir.isdigit():
+                        seen[fname] = filepath
+                    continue
+                seen[fname] = filepath
+
+        for filepath in seen.values():
+            meta = self.parse_frontmatter(filepath)
+            if meta:
+                topics.append(meta)
         self._topics_cache = topics
         self._topics_cache_time = now
         return topics
