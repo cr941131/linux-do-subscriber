@@ -29,10 +29,14 @@ class MarkdownStore:
         for tag in tags:
             if not tag:
                 continue
-            if tag in stats:
-                stats[tag]["count"] = stats[tag].get("count", 0) + 1
+            tag_key = tag.get("name") or tag.get("slug") or tag if isinstance(tag, dict) else tag
+            if not tag_key:
+                continue
+            if tag_key in stats:
+                stats[tag_key]["count"] = stats[tag_key].get("count", 0) + 1
             else:
-                stats[tag] = {"count": 1, "slug": tag}
+                slug = tag.get("slug") if isinstance(tag, dict) else tag_key
+                stats[tag_key] = {"count": 1, "slug": slug}
         try:
             with open(self.tag_stats_path, "w", encoding="utf-8") as f:
                 json.dump(stats, f, ensure_ascii=False, indent=2)

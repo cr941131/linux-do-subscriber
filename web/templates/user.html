@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}@{{ username }} 的帖子 - Linux.do 订阅器{% endblock %}
+
+{% block content %}
+<div class="user-profile">
+    <div class="profile-header">
+        <h1>@{{ username }}</h1>
+        <p>关注用户 · {{ topics|length }} 篇帖子</p>
+    </div>
+
+    <div class="topic-list compact">
+        {% for t in topics %}
+        <article class="topic-row">
+            <div class="topic-main">
+                <a class="title" href="/topic/{{ topic_url(t._filepath) }}">
+                    {{ t.title }}
+                </a>
+                <div class="meta">
+                    <span class="time" title="发布时间">发布 {{ t.relative_created }}</span>
+                    <span class="time" title="最后回复">回复 {{ t.relative_bumped }}</span>
+                    <span class="stat">{{ t.replies_count }} 回复</span>
+                    <span class="stat">{{ t.views }} 浏览</span>
+                </div>
+            </div>
+        </article>
+        {% else %}
+        <div class="empty">该用户暂无已抓取的帖子。</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

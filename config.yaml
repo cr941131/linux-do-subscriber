@@ -1,0 +1,63 @@
+# Linux.do 订阅器配置
+site:
+  base_url: "https://linux.do"
+  rss_url: "https://linux.do/latest.rss"
+  # Discourse 默认每页 30 条，max 可设为 100
+  page_size: 50
+
+# 抓取设置
+fetch:
+  # 正常轮询间隔（分钟）
+  interval_minutes: 10
+
+  # 回填安全限制：超过此页数仍未追上已知内容时，触发用户确认
+  backfill_safe_limit: 20
+  # 回填时是否交互式询问（命令行模式下有效）
+  backfill_confirm: true
+
+  # 请求间隔（秒），避免速率限制
+  request_delay: 2.5
+  # 随机抖动（秒），让请求模式更像人类
+  request_jitter: 1.5
+
+  # 礼貌性 User-Agent，降低被封概率
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 LinuxDo-Subscriber/1.0"
+
+# 关注用户（用户名，对应 /u/{username}）
+following_users:
+  - smallmain
+
+# 关注标签（slug，对应 /tag/{slug}）
+following_tags:
+  - 开源推广
+  - 公益推广
+  - 人工智能
+  - ChatGPT
+  - Claude
+  - DeepSeek
+  - Python
+  - JavaScript
+  - Rust
+  - 教程
+  - 薅羊毛
+  - 影视
+  - 游戏
+  - 音乐
+  - 书籍
+  - 美食
+  - 旅行
+  - 网络安全
+  - VPS
+  - 原创
+
+# 全局筛选默认值
+filters:
+  min_replies: 0
+  max_age_days: 30
+  # 包含的分类 slug 列表，空列表表示全部
+categories: []
+  # 包含的标签列表，空列表表示全部
+tags: []
+
+# 数据目录
+data_dir: "./data"

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}{{ topic.title }} - Linux.do 订阅器{% endblock %}
+
+{% block content %}
+<div class="topic-detail">
+    <nav class="breadcrumb">
+        <a href="/">首页</a>
+        <span>/</span>
+        <a href="/?category={{ category_dir }}">{{ category_dir }}</a>
+        <span>/</span>
+        <span>{{ topic.title }}</span>
+    </nav>
+
+    <div class="post-stream">
+        {{ topic._content | markdown | safe }}
+    </div>
+
+    <div class="topic-meta-footer">
+        <div class="source">
+            <a href="{{ topic.source }}" target="_blank" rel="noopener">查看原文 →</a>
+        </div>
+        <div class="git-history">
+            <h4>最近变更</h4>
+            {% if topic.history %}
+            <ul>
+                {% for h in topic.history %}
+                <li><code>{{ h.hash[:8] }}</code> {{ h.date }} — {{ h.message }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>暂无历史记录</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="topic-nav">
+        {% if prev_topic %}
+        <a class="prev" href="/topic/categories/{{ category_dir }}/{{ prev_topic }}">← 上一帖</a>
+        {% endif %}
+        {% if next_topic %}
+        <a class="next" href="/topic/categories/{{ category_dir }}/{{ next_topic }}">下一帖 →</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

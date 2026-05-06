@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}关注用户 - Linux.do 订阅器{% endblock %}
+
+{% block content %}
+<div class="user-profile">
+    <div class="profile-header">
+        <h1>关注用户</h1>
+        <p>共 {{ updates|length }} 位关注用户</p>
+    </div>
+
+    {% if not updates %}
+    <div class="empty">
+        暂无关注用户，请在 <code>config.yaml</code> 的 <code>following_users</code> 中配置。
+    </div>
+    {% endif %}
+
+    {% for username, topics in updates.items() %}
+    <div class="panel">
+        <h3 style="margin-bottom:12px;">
+            <a href="/user/{{ username }}">@{{ username }}</a>
+            <small style="color:var(--text-secondary);font-weight:400;">{{ topics|length }} 篇帖子</small>
+        </h3>
+
+        {% if topics %}
+        <div class="topic-list compact" style="border:none;box-shadow:none;">
+            {% for t in topics[:10] %}
+            <article class="topic-row">
+                <div class="topic-main">
+                    <a class="title" href="/topic/{{ topic_url(t._filepath) }}">
+                        {{ t.title }}
+                    </a>
+                    <div class="meta">
+                        <span class="cat">{{ t.category_id }}</span>
+                        <span class="time" title="发布时间">发布 {{ t.relative_created }}</span>
+                        <span class="time" title="最后回复">回复 {{ t.relative_bumped }}</span>
+                        <span class="stat">{{ t.replies_count }} 回复</span>
+                        <span class="stat">{{ t.views }} 浏览</span>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+            {% if topics|length > 10 %}
+            <div style="text-align:center;padding:8px 0;">
+                <a href="/user/{{ username }}" style="font-size:13px;">查看全部 {{ topics|length }} 篇 →</a>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="empty" style="padding:20px 0;font-size:13px;">该用户暂无已抓取的帖子。</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -191,8 +191,11 @@ def index():
     all_tags = set()
     for t in topics:
         for tag in t.get("tags", []):
-            if tag:
-                all_tags.add(tag)
+            if not tag:
+                continue
+            tag_key = tag.get("name") or tag.get("slug") or tag if isinstance(tag, dict) else tag
+            if tag_key:
+                all_tags.add(tag_key)
     all_tags = sorted(all_tags)
 
     # 红点标记：last_fetched 晚于已读时间的内容

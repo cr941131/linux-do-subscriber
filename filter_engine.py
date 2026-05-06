@@ -119,7 +119,11 @@ class FilterEngine:
                 if t.get("category_id") not in cats:
                     continue
             if tags_filter:
-                topic_tags = set(t.get("tags") or [])
+                raw_tags = t.get("tags") or []
+                topic_tags = set(
+                    (tag.get("name") or tag.get("slug") or tag if isinstance(tag, dict) else tag)
+                    for tag in raw_tags if tag
+                )
                 if not topic_tags.intersection(set(tags_filter)):
                     continue
             if author and t.get("author") != author:
@@ -150,7 +154,11 @@ class FilterEngine:
         result = []
         for t in topics:
             if search_type == "tag":
-                topic_tags = [tag.lower() for tag in (t.get("tags") or [])]
+                raw_tags = t.get("tags") or []
+                topic_tags = [
+                    (tag.get("name") or tag.get("slug") or tag if isinstance(tag, dict) else tag).lower()
+                    for tag in raw_tags if tag
+                ]
                 if any(q in tag for tag in topic_tags):
                     result.append(t)
             elif search_type == "category":

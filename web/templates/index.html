@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- 分类导航条 -->
+<div class="cat-nav">
+    <a href="{{ build_url('/', category=None) }}" class="{% if not request_args.category %}active{% endif %}">全部</a>
+    {% for cat in categories %}
+    <a href="{{ build_url('/', category=cat) }}" class="{% if request_args.category == cat %}active{% endif %}">
+        {{ cat }}
+    </a>
+    {% endfor %}
+</div>
+
+<div class="sidebar-layout">
+    <aside class="sidebar">
+        <div class="panel">
+            <h3>标签</h3>
+            <button class="btn-primary" style="width:100%;margin-bottom:8px;" onclick="openTagModal()">所有标签</button>
+            <div class="tag-cloud">
+                {% if all_tags %}
+                    {% for tname in all_tags %}
+                    <a href="javascript:void(0)" onclick="toggleTag('{{ tname }}')" class="tag-pill {% if request_args.tag == tname %}active{% endif %}">{{ tname }}</a>
+                    {% endfor %}
+                {% else %}
+                    <span style="font-size:12px;color:var(--text-secondary)">暂无标签数据</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>排序</h3>
+            <form method="get" id="sort-form" class="filter-form">
+                {% if request_args.category %}<input type="hidden" name="category" value="{{ request_args.category }}">{% endif %}
+                {% if request_args.tag %}<input type="hidden" name="tag" value="{{ request_args.tag }}">{% endif %}
+                {% if request_args.min_replies %}<input type="hidden" name="min_replies" value="{{ request_args.min_replies }}">{% endif %}
+                {% if request_args.max_age_days %}<input type="hidden" name="max_age_days" value="{{ request_args.max_age_days }}">{% endif %}
+                {% if request_args.author %}<input type="hidden" name="author" value="{{ request_args.author }}">{% endif %}
+                {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+                {% if search_type %}<input type="hidden" name="search_type" value="{{ search_type }}">{% endif %}
+                <select name="sort_by" onchange="document.getElementById('sort-form').submit()">
+                    <option value="bumped_at" {% if request_args.sort_by == 'bumped_at' %}selected{% endif %}>最后回复</option>
+                    <option value="created_at" {% if request_args.sort_by == 'created_at' %}selected{% endif %}>发布时间</option>
+                    <option value="replies_count" {% if request_args.sort_by == 'replies_count' %}selected{% endif %}>回复数</option>
+                    <option value="views" {% if request_args.sort_by == 'views' %}selected{% endif %}>浏览量</option>
+                </select>
+            </form>
+            <button class="btn-primary" style="width:100%;margin-top:12px;" onclick="openFilterModal()">更多筛选</button>
+            <a href="/" class="btn-link">重置所有筛选</a>
+        </div>
+    </aside>
+
+    <section class="topic-list">
+        <div class="list-header">
+            <h2>
+                {% if q %}
+                    {% if search_type == 'tag' %}标签搜索{% elif search_type == 'category' %}类别搜索{% else %}搜索结果{% endif %}：{{ q }}
+                {% elif request_args.category %}{{ request_args.category }}{% else %}最新帖子{% endif %}
+                <small>共 {{ topics|length }} 条</small>
+                {% if q %}<a href="{{ build_url('/', q=None, search_type=None) }}" class="btn-link" style="margin-left:8px;font-size:12px;">清除搜索</a>{% endif %}
+            </h2>
+        </div>
+
+        {% for t in topics %}
+        <article class="topic-row {% if t.is_new %}is-new{% endif %}">
+            <div class="topic-main">
+                <a class="title" href="/topic/{{ topic_url(t._filepath) }}">
+                    {{ t.title }}
+                </a>
+                <div class="meta">
+                    <span class="cat">{{ t.category_id }}</span>
+                    <span class="author">@{{ t.author }}</span>
+                    <span class="time" title="发布时间">发布 {{ t.relative_created }}</span>
+                    <span class="time" title="最后回复">回复 {{ t.relative_bumped }}</span>
+                    {% if t.tags %}
+                        {% for tag in t.tags %}
+                        <span class="tag-pill">{{ tag }}</span>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="topic-stats">
+                <div class="stat" title="回复数">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    {{ t.replies_count }}
+                </div>
+                <div class="stat" title="浏览量">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    {{ t.views }}
+                </div>
+            </div>
+            {% if t.is_new %}
+            <span class="new-badge">新</span>
+            {% endif %}
+        </article>
+        {% else %}
+        <div class="empty">暂无帖子，请先运行抓取脚本。</div>
+        {% endfor %}
+    </section>
+</div>
+
+<!-- 所有标签 Modal -->
+<div id="tag-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>所有标签</h3>
+            <button class="modal-close" onclick="closeTagModal()">&times;</button>
+        </div>
+        <input type="text" id="tag-search" placeholder="搜索标签..." oninput="filterTags()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:12px;font-size:13px;">
+        <div id="tag-list" class="tag-list-grid">
+            <div style="color:var(--text-secondary);font-size:13px;">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 更多筛选 Modal -->
+<div id="filter-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>更多筛选</h3>
+            <button class="modal-close" onclick="closeFilterModal()">&times;</button>
+        </div>
+        <form method="get" id="more-filter-form" class="filter-form">
+            {% if request_args.category %}<input type="hidden" name="category" value="{{ request_args.category }}">{% endif %}
+            {% if request_args.sort_by %}<input type="hidden" name="sort_by" value="{{ request_args.sort_by }}">{% endif %}
+            {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+            {% if search_type %}<input type="hidden" name="search_type" value="{{ search_type }}">{% endif %}
+
+            <label>最少回复</label>
+            <input type="number" name="min_replies" value="{{ request_args.min_replies or '' }}" min="0">
+
+            <label>最大天数</label>
+            <input type="number" name="max_age_days" value="{{ request_args.max_age_days or '' }}" min="1">
+
+            <label>作者</label>
+            <input type="text" name="author" value="{{ request_args.author or '' }}">
+
+            <label>标签</label>
+            <input type="text" name="tag" value="{{ request_args.tag or '' }}" placeholder="输入标签名">
+
+            <button type="submit" style="margin-top:12px;width:100%;">应用</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function openTagModal() {
+    document.getElementById('tag-modal').style.display = 'flex';
+    if (!window._tagDataLoaded) {
+        loadTags();
+    }
+}
+function closeTagModal() {
+    document.getElementById('tag-modal').style.display = 'none';
+}
+function openFilterModal() {
+    document.getElementById('filter-modal').style.display = 'flex';
+}
+function closeFilterModal() {
+    document.getElementById('filter-modal').style.display = 'none';
+}
+window.onclick = function(e) {
+    if (e.target.classList.contains('modal')) {
+        e.target.style.display = 'none';
+    }
+};
+
+let allTagData = [];
+function loadTags() {
+    fetch('/api/tags')
+        .then(r => r.json())
+        .then(data => {
+            allTagData = data.tags || [];
+            window._tagDataLoaded = true;
+            renderTags(allTagData);
+        })
+        .catch(() => {
+            document.getElementById('tag-list').innerHTML = '<div style="color:var(--text-secondary)">加载失败</div>';
+        });
+}
+function toggleTag(tagName) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tag') === tagName) {
+        params.delete('tag');
+    } else {
+        params.set('tag', tagName);
+    }
+    window.location.href = '/?' + params.toString();
+}
+function renderTags(tags) {
+    const container = document.getElementById('tag-list');
+    if (!tags.length) {
+        container.innerHTML = '<div style="color:var(--text-secondary)">暂无标签</div>';
+        return;
+    }
+    const currentTag = new URLSearchParams(window.location.search).get('tag') || '';
+    container.innerHTML = tags.map(t => {
+        const active = currentTag === t.name ? 'active' : '';
+        const safeName = t.name.replace(/'/g, "\\'");
+        return `<a href="javascript:void(0)" onclick="toggleTag('${safeName}')" class="tag-pill ${active}" style="display:inline-flex;align-items:center;gap:4px;">${t.name}<span style="font-size:11px;opacity:0.6;">${t.count}</span></a>`;
+    }).join('');
+}
+function filterTags() {
+    const q = document.getElementById('tag-search').value.trim().toLowerCase();
+    const filtered = allTagData.filter(t => t.name.toLowerCase().includes(q));
+    renderTags(filtered);
+}
+</script>
+{% endblock %}
