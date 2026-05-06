@@ -55,3 +55,8 @@
 
 #### 变更内容
 - 新增 category-map.json 维护 id→名称映射，main.py 保存帖子时优先查表。迁移全部剩余数字目录（11/14/27/34/4/94）。
+
+### docs: 维护文档体系，补充分类映射与 Playwright 陷阱
+
+#### 变更内容
+- pitfalls.md 新增数字分类目录、Playwright 窗口隐藏；deployment.md 新增 SSH(Port 443) 与 category-map.json；overview.md 新增 category-map.json 设计决策。
