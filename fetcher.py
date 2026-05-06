@@ -122,12 +122,12 @@ class LinuxDoFetcher:
                     found.append(hwnd)
                 return True
 
-            # 循环尝试：窗口创建可能有延迟
-            for _ in range(20):
+            # 高频循环：窗口创建可能有延迟，50ms 内多次检测
+            for _ in range(100):
                 user32.EnumWindows(EnumWindowsProc(enum_callback), 0)
                 if found:
                     break
-                kernel32.Sleep(50)
+                kernel32.Sleep(5)
         except Exception:
             pass
 

@@ -202,8 +202,9 @@
 
         // 阻止下拉面板内滚动事件冒泡到页面
         rdList.addEventListener('wheel', function(e) {
-            const atTop = rdList.scrollTop === 0;
-            const atBottom = rdList.scrollTop + rdList.clientHeight >= rdList.scrollHeight;
+            e.stopPropagation();
+            const atTop = rdList.scrollTop <= 0;
+            const atBottom = rdList.scrollTop + rdList.clientHeight >= rdList.scrollHeight - 1;
             if ((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atBottom)) {
                 e.preventDefault();
             }

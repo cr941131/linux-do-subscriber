@@ -218,6 +218,7 @@ a:hover { text-decoration: underline; }
 .rd-list {
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
     padding: 4px 0;
 }
 .rd-item {
